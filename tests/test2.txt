@@ -1,0 +1,4 @@
+# Демонстрация ошибок
+foobar
+cd arg1 arg2
+exit
