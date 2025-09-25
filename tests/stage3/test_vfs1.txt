@@ -1,0 +1,4 @@
+# Тест минимального VFS
+ls
+vfs-save saved_minimal.xml
+exit

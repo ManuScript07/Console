@@ -1,0 +1,10 @@
+# Тест глубокой структуры
+ls
+cd level1
+ls
+cd level2
+ls
+cd level3
+ls
+vfs-save saved_deep.xml
+exit

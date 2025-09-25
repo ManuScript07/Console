@@ -1,0 +1,28 @@
+# Тест базовых команд (этап 1)
+# 1
+ls -la
+cd /home
+exit
+
+# 2
+foobar
+cd arg1 arg2
+exit
+
+# Тест работы с VFS (этап 3)
+ls
+cd level1
+ls
+cd level2
+ls
+cd level3
+ls
+
+# Проверка сохранения
+vfs-save saved_stage3.xml
+
+# Ошибочные случаи
+cd not_exist
+ls invalid
+
+exit

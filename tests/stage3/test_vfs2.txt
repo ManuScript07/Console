@@ -1,0 +1,9 @@
+# Тест VFS с папками и файлами
+ls
+cd docs
+ls
+cd ..
+cd logs
+ls
+vfs-save saved_multi.xml
+exit

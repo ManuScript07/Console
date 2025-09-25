@@ -1,0 +1,13 @@
+<vfs>
+  <dir name="root">
+    <dir name="level1">
+      <dir name="level2">
+        <dir name="level3">
+          <file name="readme.md">U3RhZ2UgMyB0ZXN0</file>
+        </dir>
+        <file name="config.json">eyJkZWJ1ZyI6IHRydWV9</file>
+      </dir>
+      <file name="notes.txt">TmVzdGVkIGZpbGU=</file>
+    </dir>
+  </dir>
+</vfs>

@@ -1,0 +1,11 @@
+<vfs>
+  <dir name="root">
+    <dir name="docs">
+      <file name="hello.txt">SGVsbG8h</file>
+      <file name="data.txt">MTIzNDU=</file>
+    </dir>
+    <dir name="logs">
+      <file name="info.log">TG9nIGVudHJ5</file>
+    </dir>
+  </dir>
+</vfs>
