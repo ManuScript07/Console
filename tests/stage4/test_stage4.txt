@@ -1,0 +1,51 @@
+# Проверка начального состояния
+ls
+ls -l
+
+# Переход в level1 и обратно
+cd level1
+ls
+ls -l
+cd ..
+ls
+
+# Проверка перехода без аргументов (в root)
+cd
+ls
+
+# Ошибки cd
+cd not_exist
+cd /wrong/path
+
+# Абсолютные пути
+ls /level1
+ls -l /level1/level2
+cd /level1/level2
+ls
+
+# Относительные пути
+cd ..
+ls
+cd level2
+ls -l
+ls /level1
+ls ../../
+
+# Проверка глубокой вложенности
+cd level3
+ls
+ls -l
+cd ..
+ls
+
+# Проверка работы флага -l с разными путями
+ls -l
+ls -l ..
+ls -l /level1/level2/level3
+
+# Дополнительные команды
+uptime
+history
+
+# Завершение
+# exit

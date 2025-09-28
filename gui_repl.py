@@ -7,7 +7,7 @@ import os
 import argparse
 import base64
 import xml.etree.ElementTree as ET
-
+import time
 
 
 class VFS:
@@ -28,9 +28,6 @@ class VFS:
             if dir_elem is None:
                 raise ValueError("VFS не содержит корневой директории")
             
-            # root_name = dir_elem.get("name", "root")
-            # self.root = self._parse_dir(dir_elem)
-            # self.cwd = [root_name]
             self.root = self._parse_dir(dir_elem)
             self.cwd = []
 
@@ -43,7 +40,6 @@ class VFS:
     
     def save_to_xml(self, path):
         vfs_elem = ET.Element("vfs")
-        root_name = self.cwd[0] if self.cwd else "root"
         vfs_elem.append(self._dir_to_xml(self.root, "root"))
         tree = ET.ElementTree(vfs_elem)
         tree.write(path, encoding="utf-8", xml_declaration=True)
@@ -76,30 +72,37 @@ class VFS:
                 dir_elem.append(file_elem)
         return dir_elem
     
+    #----------------------------------------------------------------------------------
 
-    def list_dir(self):
-        node = self._get_node(self.cwd)
-        if node and node["type"] == "dir":
-            return list(node["children"].keys())
-        return []
-    
+    def resolve_path(self, path_str):
+        if path_str is None:
+            return list(self.cwd)
+        s = path_str.replace("\\", "/").strip()
 
-    def change_dir(self, dirname):
-        if dirname == "..":
-            if self.cwd:
-                self.cwd.pop()
+        if s == "":
+            return []
+
+        absolute = s.startswith("/")
+        comps = [c for c in s.split("/") if c != ""]
+
+        if absolute:
+            path = []
         else:
-            node = self._get_node(self.cwd)
-            if (
-                node
-                and dirname in node["children"]
-                and node["children"][dirname]["type"] == "dir"
-            ):
-                self.cwd.append(dirname)
-                print(self.cwd)
-            else:
-                raise ValueError(f"Директория '{dirname}' не найдена")
-            
+            path = list(self.cwd)
+
+        for comp in comps:
+            if comp == ".":
+                continue
+            if comp == "..":
+                if path:
+                    path.pop()
+                continue
+            if comp.lower() == "root":
+                path = []
+                continue
+            path.append(comp)
+        return path
+
 
     def _get_node(self, path):
         node = self.root
@@ -109,6 +112,40 @@ class VFS:
             else:
                 return None
         return node
+
+
+    def list_dir(self, path_str=None):
+        path = self.resolve_path(path_str)
+        node = self._get_node(path)
+        if node and node["type"] == "dir":
+            return list(node["children"].keys())
+        return []
+    
+
+    def list_dir_details(self, path_str=None):
+        path = self.resolve_path(path_str)
+        node = self._get_node(path)
+        details = []
+        if node and node["type"] == "dir":
+            for name, child in node["children"].items():
+                if child["type"] == "dir":
+                    details.append({"name": name, "type": "dir", "children": len(child["children"])})
+                else:
+                    size = len(child.get("content", ""))
+                    details.append({"name": name, "type": "file", "size": size})
+        return details
+
+
+    def change_dir(self, path_str):
+        target = self.resolve_path(path_str)
+        node = self._get_node(target)
+        if node and node["type"] == "dir":
+            self.cwd = target
+        else:
+            raise ValueError(f"Директория '{path_str}' не найдена")
+            
+
+    
 
 
 
@@ -129,10 +166,12 @@ class ShellEmulator:
             vfs_status = "VFS не загружен"
 
         self.script_path = script_path
+        self.start_time = time.time()
+        self.history = []
 
 
         root.title(f"Эмулятор - [{self.username}@{self.hostname}]")
-        root.resizable(False, False)
+        # root.resizable(False, False)
     
 
         self.output_area = scrolledtext.ScrolledText(root, wrap=tk.WORD, height=20, width=80, state="disabled")
@@ -173,29 +212,71 @@ class ShellEmulator:
             self.write_output(f"Ошибка при выполнении скрипта: {e}")
 
 
+    def get_uptime(self):
+        elapsed = int(time.time() - self.start_time)
+        hours, remainder = divmod(elapsed, 3600)
+        minutes, seconds = divmod(remainder, 60)
+        return f"{hours:02}:{minutes:02}:{seconds:02}"
+
+
     def execute_command_from_script(self, line):
         self.write_output(line)
+        self.history.append(line)
 
         tokens = [t for t in line.split(" ") if t]
         cmd, args = tokens[0], tokens[1:]
 
         try:
             if cmd == "ls":
-                # items = self.vfs.list_dir()
-                self.write_output(f"ls: args: {' '.join(args) if args else '<none>'}")
-            elif cmd == "cd":
-                if len(args) == 0:
-                    self.write_output("cd: args: <none>")
+                long_format = False
+                target = None
+                for a in args:
+                    if a == "-l":
+                        long_format = True
+                    elif a.startswith("-"):
+                        pass
+                    else:
+                        target = a
+                        break
+
+                if long_format:
+                    details = self.vfs.list_dir_details(target)
+                    if not details:
+                        self.write_output("<empty>")
+                    else:
+                        for d in details:
+                            if d["type"] == "dir":
+                                self.write_output(f"dr\t{d['name']}\t{d['children']} items")
+                            else:
+                                self.write_output(f"-f\t{d['name']}\t{d['size']} bytes")
                 else:
-                    self.write_output("Неверные аргументы для cd")
-                # else:
-                #     self.vfs.change_dir(args[0])
+                    names = self.vfs.list_dir(target)
+                    self.write_output(" ".join(names) if names else "<empty>")
+
+            elif cmd == "cd":
+                if not args:
+                    self.vfs.cwd = []
+                else:
+                    path_arg = " ".join(args)
+                    try:
+                        self.vfs.change_dir(path_arg)
+                    except ValueError as e:
+                        self.write_output(f"Ошибка выполнения команды: {e}")
+
             elif cmd == "vfs-save":
                 if not args:
                     self.write_output("Ошибка: нужно указать путь для сохранения")
                 else:
                     self.vfs.save_to_xml(args[0])
                     self.write_output(f"VFS сохранён в {args[0]}")
+            
+            elif cmd == "uptime":
+                self.write_output(f"Uptime: {self.get_uptime()}")
+
+            elif cmd == "history":
+                for i, h in enumerate(self.history, 1):
+                    self.write_output(f"{i} {h}")
+            
             elif cmd == "exit":
                 self.write_output("Выход из эмулятора... Нажмите любую клавишу для закрытия окна.")
                 self.input_field.unbind("<Return>")
