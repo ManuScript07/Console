@@ -1,0 +1,33 @@
+# --- Тест ls и cd ---
+ls
+ls -l
+cd level1
+ls
+cd ..
+cd not_exist
+
+# --- Тест touch ---
+touch newfile.txt
+ls -l
+touch level1
+
+# --- Тест mv ---
+mv newfile.txt renamed.txt
+ls -l
+mv renamed.txt level1/
+ls level1
+mv not_exist.txt dummy.txt
+mv level1 levelX
+ls
+
+# --- Тест uptime ---
+uptime
+
+# --- Тест history ---
+history
+
+# --- Тест vfs-save ---
+vfs-save saved_stage5.xml
+
+# --- Завершение ---
+exit

@@ -12,7 +12,7 @@ import time
 
 class VFS:
     def __init__(self):
-        self.root = {"type": "dir", "children": {}}
+        self.root = {"type": "dir", "children": {}} 
         self.cwd = []
 
     
@@ -143,6 +143,59 @@ class VFS:
             self.cwd = target
         else:
             raise ValueError(f"Директория '{path_str}' не найдена")
+        
+    
+    def touch(self, path_str):
+        path = self.resolve_path(path_str)
+        if not path:
+            raise ValueError("Нельзя создать файл в корне без имени")
+
+        filename = path[-1]
+        parent = self._get_node(path[:-1])
+
+        if not parent or parent["type"] != "dir":
+            raise ValueError(f"Путь '{'/'.join(path[:-1])}' не является директорией")
+
+        if filename in parent["children"] and parent["children"][filename]["type"] == "dir":
+            raise ValueError(f"Нельзя создать файл: '{filename}' уже является директорией")
+
+        parent["children"][filename] = {
+            "type": "file",
+            "content": parent["children"].get(filename, {}).get("content", "")
+        }
+
+    
+    def mv(self, src_str, dst_str):
+        src = self.resolve_path(src_str)
+        dst = self.resolve_path(dst_str)
+
+        if not src:
+            raise ValueError("Источник не может быть корнем")
+
+        src_name = src[-1]
+        src_parent = self._get_node(src[:-1])
+        if not src_parent or src_name not in src_parent["children"]:
+            raise ValueError(f"Источник '{src_str}' не найден")
+
+        node = src_parent["children"][src_name]
+
+        if node["type"] == "dir":
+            if dst[:len(src)] == src:
+                raise ValueError("Нельзя перемещать директорию внутрь самой себя или её поддиректории")
+
+        src_parent["children"].pop(src_name)
+
+        dst_node = self._get_node(dst)
+        if dst_node and dst_node["type"] == "dir":
+            dst_node["children"][src_name] = node
+        else:
+            dst_parent = self._get_node(dst[:-1])
+            if not dst_parent or dst_parent["type"] != "dir":
+                raise ValueError(f"Путь назначения '{dst_str}' не существует")
+            dst_parent["children"][dst[-1]] = node
+
+
+
             
 
     
@@ -276,6 +329,26 @@ class ShellEmulator:
             elif cmd == "history":
                 for i, h in enumerate(self.history, 1):
                     self.write_output(f"{i} {h}")
+
+            elif cmd == "touch":
+                if not args:
+                    self.write_output("Ошибка: нужно указать имя файла")
+                else:
+                    try:
+                        self.vfs.touch(args[0])
+                        self.write_output(f"Файл '{args[0]}' создан")
+                    except ValueError as e:
+                        self.write_output(f"Ошибка: {e}")
+
+            elif cmd == "mv":
+                if len(args) != 2:
+                    self.write_output("Ошибка: нужно указать источник и назначение")
+                else:
+                    try:
+                        self.vfs.mv(args[0], args[1])
+                        self.write_output(f"Перемещено '{args[0]}' → '{args[1]}'")
+                    except ValueError as e:
+                        self.write_output(f"Ошибка: {e}")
             
             elif cmd == "exit":
                 self.write_output("Выход из эмулятора... Нажмите любую клавишу для закрытия окна.")
